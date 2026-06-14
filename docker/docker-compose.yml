@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: eudr_postgis
+    environment:
+      POSTGRES_USER: eudr
+      POSTGRES_PASSWORD: eudr_dev_password
+      POSTGRES_DB: eudr_risk
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
