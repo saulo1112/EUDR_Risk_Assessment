@@ -1,3 +1,17 @@
+# =============================================================================
+# SUPERSEDED — kept for documentation only. NOT part of the canonical pipeline.
+#
+# This is the Phase 4 "v2" model: RandomForest on [area_ha, neighborhood_defo_pct]
+# (200 m ring) with a single train/test split. It scored macro-F1 = 0.43.
+# It has been replaced by src/phase4_scoring_v3.py (multi-radius neighbourhood +
+# distance-to-deforestation features, stratified 5-fold CV). It also writes the
+# now-unused data/farms_neighborhood.csv (200 m only); v3 uses
+# data/farms_neighborhood_multi.csv instead.
+#
+# See docs/PIPELINE.md for the canonical run order and docs/phase4_model_comparison.md
+# for the v1 -> v2 -> v3 progression. Do not run this as part of a fresh build.
+# =============================================================================
+
 import ee, geemap, geopandas as gpd
 import pandas as pd
 from sqlalchemy import create_engine, text

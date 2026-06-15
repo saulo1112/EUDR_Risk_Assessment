@@ -11,3 +11,12 @@ wheels/
 
 # Local environment variables (secrets) — keep .env.example tracked
 .env
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+
+# Generated at container runtime from API_BASE_URL (see frontend Dockerfile);
+# a default copy is kept in the repo for local dev.
+# (config.js itself is tracked as the local-dev default.)

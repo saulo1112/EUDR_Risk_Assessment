@@ -2,7 +2,9 @@
    EUDR Forest Risk Assessment — frontend logic (vanilla JS)
    ============================================================ */
 
-const API_BASE = "http://localhost:8000";
+// Set by config.js (window.API_BASE); falls back to localhost for local dev.
+const API_BASE = (typeof window !== "undefined" && window.API_BASE)
+  || "http://localhost:8000";
 
 // Risk-class presentation config (color, human label, map stroke weight).
 const RISK = {

@@ -1,3 +1,8 @@
+# Unified EUDR Risk demo stack: PostGIS + FastAPI + static dashboard.
+# Run from the repo root:
+#   docker compose -f docker/docker-compose.yml up --build
+# Build contexts are ".." (the repo root) since this file lives in docker/.
+
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -10,6 +15,48 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Seed scripts auto-load on FIRST start (empty volume). 20_* runs after
+      # the image's own postgis init. Self-contained: no pipeline/EE needed.
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eudr -d eudr_risk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/api/Dockerfile
+    container_name: eudr_api
+    environment:
+      # Point at the db SERVICE name on the compose network, not localhost.
+      DATABASE_URL: postgresql://eudr:eudr_dev_password@db:5432/eudr_risk
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: src/frontend/Dockerfile
+    container_name: eudr_frontend
+    environment:
+      # The browser runs on the HOST, so it reaches the API via the host port.
+      API_BASE_URL: http://localhost:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   pgdata:

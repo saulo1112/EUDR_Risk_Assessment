@@ -79,41 +79,71 @@ Forest Data Partnership (Côte d'Ivoire, Ghana, Indonesia, Ecuador, Peru).
 .
 ├── data/                          # GeoJSON / CSV intermediate outputs
 ├── docs/
+│   ├── PIPELINE.md                # canonical run order + diagnostic scripts
+│   ├── CODE_AUDIT.md              # pre-Phase-7 code review
 │   └── phase4_model_comparison.md # full model comparison + sensitivity check
 ├── docker/
-│   └── docker-compose.yml         # PostGIS service
+│   ├── docker-compose.yml         # db + api + frontend stack
+│   └── init/                      # SQL seed (4,170 scored parcels), auto-loaded
 ├── src/
 │   ├── phase1_aoi_parcels.py
 │   ├── phase2_deforestation.py
 │   ├── phase3_postgis.py
-│   ├── phase4_scoring.py          # v1/v2 (superseded, kept for documentation)
+│   ├── phase4_scoring.py          # v2 (superseded, kept for documentation)
 │   ├── phase4_distance.py
 │   ├── phase4_neighborhood_multi.py
 │   ├── phase4_scoring_v3.py       # final model
-│   ├── api/                       # FastAPI app
-│   └── frontend/                  # static map dashboard
+│   ├── api/                       # FastAPI app (+ Dockerfile)
+│   └── frontend/                  # static map dashboard (+ Dockerfile)
 └── pyproject.toml
 ```
 
 ## Getting started
 
-### Prerequisites
+There are two paths. **Quick start** runs the whole stack from a pre-loaded
+database snapshot — no Earth Engine, no Python pipeline, just Docker. **Full
+pipeline** regenerates every dataset from source imagery (requires Google Earth
+Engine credentials).
 
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/)
-- Docker Desktop
-- A Google Earth Engine account (Collaborator tier) with a linked Google
-  Cloud project
+### Quick start (Docker, pre-loaded data)
 
-### Setup
+The only prerequisite is **Docker Desktop**. The PostGIS container auto-loads a
+seed dump (`docker/init/`) with all 4,170 parcels already scored, so the API and
+dashboard work immediately.
+
+```bash
+# from the repo root
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Then open:
+
+| Service | URL |
+|---|---|
+| Dashboard | http://localhost:8080 |
+| API docs (Swagger) | http://localhost:8000/docs |
+| PostGIS | `localhost:5432` (`eudr` / `eudr_dev_password` / `eudr_risk`) |
+
+The stack is three services — `db` (PostGIS + seed), `api` (FastAPI), and
+`frontend` (nginx). The API waits for the database healthcheck before starting;
+the dashboard's API base URL is injected at container start via `API_BASE_URL`.
+To reset to a clean slate (re-load the seed): `docker compose -f
+docker/docker-compose.yml down -v` then `up --build` again.
+
+### Full pipeline (regenerate data from Earth Engine)
+
+Use this only to rebuild the datasets from scratch. Requires Python 3.10+,
+[uv](https://docs.astral.sh/uv/), Docker Desktop, and a Google Earth Engine
+account with a linked Google Cloud project.
 
 ```bash
 uv sync
 uv run python -c "import ee; ee.Authenticate()"
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up -d db   # PostGIS only
 ```
 
-### Run the pipeline
+Then run the pipeline in order (see [`docs/PIPELINE.md`](docs/PIPELINE.md) for
+the full contract and the diagnostic/superseded scripts):
 
 ```bash
 uv run python src/phase1_aoi_parcels.py        # -> data/farms.geojson
@@ -124,12 +154,17 @@ uv run python src/phase4_neighborhood_multi.py # -> data/farms_neighborhood_mult
 uv run python src/phase4_scoring_v3.py         # trains model, updates risk_score/risk_class
 ```
 
-### Run the API and dashboard
+Run the API and dashboard directly (without their containers):
 
 ```bash
 uv run uvicorn src.api.main:app --reload                       # http://localhost:8000/docs
 uv run python -m http.server 8080 --directory src/frontend     # http://localhost:8080
 ```
+
+To refresh the Docker seed after regenerating data:
+`docker exec eudr_postgis pg_dump -U eudr -d eudr_risk --no-owner --no-privileges
+-t public.farms -t public.assessments > docker/init/20_eudr_risk.sql` (then
+re-add the `CREATE EXTENSION IF NOT EXISTS postgis;` header).
 
 ## Methodology summary
 
