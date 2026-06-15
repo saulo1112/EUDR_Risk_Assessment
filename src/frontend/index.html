@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EUDR Forest Risk Assessment</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Full-bleed map background -->
+  <div id="map"></div>
+  <div class="ambient"></div>
+
+  <!-- Intro / instructions modal (shown on load) -->
+  <div id="intro" class="intro-overlay">
+    <div class="intro-modal glass">
+      <span class="intro-eyebrow">
+        <span class="brand-dot"></span>Alto Sinú · Paramillo · Colombia</span>
+      <h2 class="intro-title">Forest Risk Assessment</h2>
+      <p class="intro-lead">An interactive view of EUDR deforestation risk for
+        4,170 cocoa parcels. Each parcel is scored and classified by how exposed
+        it is to recent forest loss.</p>
+      <ul class="intro-list">
+        <li><b>Browse &amp; filter</b> parcels in the top-left panel by
+          compliance status — compliant, needs review, or non-compliant.</li>
+        <li><b>Select a parcel</b> on the map or in any list to inspect its
+          area, deforestation and risk score.</li>
+        <li><b>Early warning</b> (bottom) flags compliant parcels with elevated
+          modeled risk — the priorities for review.</li>
+        <li><b>Overview</b> (bottom-right) summarizes counts and total area.</li>
+      </ul>
+      <p class="intro-note">The risk score is a prioritization aid based on
+        spatial deforestation pressure — not an EUDR compliance verdict.</p>
+      <button id="intro-close" class="intro-btn">Explore the map</button>
+    </div>
+  </div>
+
+  <!-- 1. Parcels (top-left) -->
+  <section id="panel-parcels" class="panel glass">
+    <div class="panel-head row">
+      <div>
+        <h2>Parcels</h2>
+        <p id="parcels-summary" class="muted skeleton-text">Loading…</p>
+      </div>
+      <button id="parcels-toggle" class="icon-btn" aria-label="Toggle list">▾</button>
+    </div>
+
+    <div id="filter-chips" class="chips">
+      <button class="chip is-active" data-filter="ALL">All</button>
+      <button class="chip is-active" data-filter="LOW">
+        <span class="dot" style="--c:#5DCAA5"></span>Compliant</button>
+      <button class="chip is-active" data-filter="MEDIUM">
+        <span class="dot" style="--c:#F0997B"></span>Needs review</button>
+      <button class="chip is-active" data-filter="HIGH">
+        <span class="dot" style="--c:#E24B4A"></span>Non-compliant</button>
+    </div>
+
+    <div id="parcel-list" class="scroll-list">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  </section>
+
+  <!-- 2. Parcel detail (top-right, hidden until selection) -->
+  <section id="panel-detail" class="panel glass hidden">
+    <button id="detail-close" class="icon-btn" aria-label="Close">×</button>
+    <div class="panel-head">
+      <h2 id="detail-title">Parcel</h2>
+      <span id="detail-badge" class="badge"></span>
+    </div>
+
+    <div class="detail-grid">
+      <div class="metric">
+        <span class="metric-label">Area</span>
+        <span id="detail-area" class="metric-value">—</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Deforested</span>
+        <span id="detail-defo" class="metric-value">—</span>
+      </div>
+    </div>
+
+    <div class="score-block">
+      <div class="score-head">
+        <span class="metric-label">Risk score</span>
+        <span id="detail-score-val" class="metric-value">—</span>
+      </div>
+      <div class="bar"><div id="detail-score-bar" class="bar-fill"></div></div>
+    </div>
+
+    <p class="note">Risk score reflects proximity to recent forest loss and
+      surrounding deforestation pressure — not an EUDR compliance verdict.</p>
+  </section>
+
+  <!-- 3. Early warning (bottom-left, collapsible) -->
+  <section id="panel-warning" class="panel glass">
+    <div class="panel-head row">
+      <div>
+        <h2>Early warning</h2>
+        <p class="muted">Compliant parcels with elevated modeled risk —
+          prioritize for review.</p>
+      </div>
+      <button id="warning-toggle" class="icon-btn" aria-label="Collapse">▾</button>
+    </div>
+    <div id="warning-body">
+      <div id="warning-list" class="warn-list">
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Stats (bottom-right) -->
+  <section id="panel-stats" class="panel glass">
+    <div class="panel-head"><h2>Overview</h2></div>
+    <div id="stats-tiles" class="tiles">
+      <div class="tile skeleton-tile"></div>
+      <div class="tile skeleton-tile"></div>
+      <div class="tile skeleton-tile"></div>
+    </div>
+    <div class="stats-foot">
+      <span class="metric-label">Total area</span>
+      <span id="stats-area" class="metric-value">—</span>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

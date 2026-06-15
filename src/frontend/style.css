@@ -1,0 +1,385 @@
+/* ============================================================
+   EUDR Forest Risk Assessment — dark glassmorphic UI
+   ============================================================ */
+
+:root {
+  --bg:           #0a0e0c;
+  --text:         #e8e8e6;
+  --muted:        #9a9a96;
+  --low:          #5DCAA5;  /* Compliant      */
+  --medium:       #F0997B;  /* Needs review   */
+  --high:         #E24B4A;  /* Non-compliant  */
+  --selected:     #7F77DD;  /* selection halo */
+
+  --glass-bg:     rgba(255, 255, 255, 0.04);
+  --glass-brd:    rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --radius:       20px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* ---- Map background ---- */
+#map {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--bg);
+}
+
+/* Subtle dark green-to-black radial glow in the corners */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 0% 100%, rgba(33, 92, 70, 0.35), transparent 70%),
+    radial-gradient(55% 45% at 100% 0%, rgba(20, 50, 40, 0.30), transparent 70%);
+}
+
+/* Dim the Leaflet attribution to fit the dark theme */
+.leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.4) !important;
+  color: #888 !important;
+}
+.leaflet-control-attribution a { color: #aaa !important; }
+
+/* ============================================================
+   Glass panels
+   ============================================================ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+}
+
+.panel {
+  position: fixed;
+  z-index: 10;
+  padding: 18px 18px 16px;
+  color: var(--text);
+}
+
+.hidden { display: none !important; }
+
+.panel-head { margin-bottom: 12px; }
+.panel-head.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+h1 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.muted { color: var(--muted); font-size: 12px; margin: 2px 0 0; line-height: 1.4; }
+
+.brand-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--low);
+  box-shadow: 0 0 12px var(--low);
+}
+
+/* ============================================================
+   Leaflet zoom controls — glass styled, moved to the right edge
+   (centered vertically) so they clear the top-left Parcels panel.
+   ============================================================ */
+.leaflet-top.leaflet-right { top: 50%; transform: translateY(-50%); }
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: var(--glass-shadow) !important;
+  margin-right: 20px !important;
+}
+.leaflet-control-zoom a {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--glass-brd) !important;
+  color: var(--text) !important;
+  width: 32px; height: 32px; line-height: 32px;
+}
+.leaflet-control-zoom a:hover { background: rgba(255, 255, 255, 0.14) !important; }
+
+/* ============================================================
+   Panel positions
+   ============================================================ */
+#panel-parcels { top: 20px;    left: 20px;   width: 320px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+#panel-detail  { top: 20px;    right: 20px;  width: 340px; }
+#panel-warning { bottom: 20px; left: 50%; transform: translateX(-50%); width: 600px; padding: 12px 18px 14px; }
+#panel-stats   { bottom: 20px; right: 20px;  width: 220px; }
+
+/* Collapsible Parcels list (toggle in the header) */
+#parcels-toggle { position: static; }
+#panel-parcels.collapsed { max-height: none; }
+#panel-parcels.collapsed #filter-chips,
+#panel-parcels.collapsed .scroll-list { display: none; }
+#panel-parcels.collapsed .panel-head { margin-bottom: 0; }
+#panel-parcels.collapsed #parcels-toggle { transform: rotate(-90deg); }
+
+/* ============================================================
+   Filter chips
+   ============================================================ */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-brd);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  letter-spacing: 0.02em;
+}
+.chip:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+.chip.is-active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, #888);
+  box-shadow: 0 0 8px var(--c, #888); }
+
+/* ============================================================
+   Parcel list
+   ============================================================ */
+.scroll-list { overflow-y: auto; flex: 1; margin: 0 -6px; padding: 0 6px; }
+.scroll-list::-webkit-scrollbar { width: 6px; }
+.scroll-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+.parcel-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border: 1px solid transparent;
+}
+.parcel-row:hover { background: rgba(255, 255, 255, 0.05); }
+.parcel-row.is-selected {
+  background: rgba(127, 119, 221, 0.16);
+  border-color: rgba(127, 119, 221, 0.5);
+}
+.parcel-row .pid { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.parcel-row .pmeta { font-size: 11px; color: var(--muted); }
+
+/* ============================================================
+   Badges
+   ============================================================ */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.badge .dot { width: 7px; height: 7px; }
+.badge.LOW    { color: var(--low);    background: rgba(93, 202, 165, 0.12); }
+.badge.MEDIUM { color: var(--medium); background: rgba(240, 153, 123, 0.12); }
+.badge.HIGH   { color: var(--high);   background: rgba(226, 75, 74, 0.14); }
+
+/* ============================================================
+   Detail panel
+   ============================================================ */
+.icon-btn {
+  position: absolute; top: 14px; right: 14px;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  font-size: 16px; line-height: 1;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-brd);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.12); }
+#warning-toggle { position: static; }
+
+.detail-grid { display: flex; gap: 28px; margin: 14px 0 16px; }
+.metric { display: flex; flex-direction: column; gap: 3px; }
+.metric-label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em;
+  text-transform: uppercase; }
+.metric-value { font-size: 18px; font-weight: 600; letter-spacing: 0.01em; }
+
+.score-block { margin-bottom: 14px; }
+.score-head { display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 8px; }
+.bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08);
+  overflow: hidden; }
+.bar-fill { height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--low), var(--medium), var(--high));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+
+.note { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 4px 0 0;
+  padding-top: 12px; border-top: 1px solid var(--glass-brd); }
+
+/* ============================================================
+   Early-warning panel
+   ============================================================ */
+#warning-body { transition: max-height 0.3s ease, opacity 0.2s ease;
+  overflow: hidden; }
+#panel-warning.collapsed #warning-body { max-height: 0; opacity: 0; }
+#panel-warning.collapsed #warning-toggle { transform: rotate(-90deg); }
+
+.warn-list { max-height: 190px; overflow-y: auto; margin-top: 6px;
+  display: flex; flex-direction: column; gap: 2px; }
+.warn-list::-webkit-scrollbar { width: 6px; }
+.warn-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+.warn-row {
+  display: grid;
+  grid-template-columns: 96px 80px 1fr 56px;
+  align-items: center; gap: 14px;
+  padding: 9px 10px; border-radius: 10px; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.warn-row:hover { background: rgba(255, 255, 255, 0.05); }
+.warn-row.is-selected { background: rgba(127, 119, 221, 0.16); }
+.warn-row .pid { font-size: 13px; font-weight: 600; }
+.warn-row .wmeta { font-size: 12px; color: var(--muted); }
+.warn-row .bar { width: 100%; }
+.warn-row .wscore { font-size: 12px; font-weight: 600; text-align: right; }
+.warn-head {
+  display: grid; grid-template-columns: 96px 80px 1fr 56px;
+  gap: 14px; padding: 2px 10px 6px; font-size: 10px; color: var(--muted);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ============================================================
+   Stats panel
+   ============================================================ */
+.tiles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.tile {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-brd);
+}
+.tile .dot { width: 9px; height: 9px; flex: 0 0 auto; }
+.tile .tnum { font-size: 18px; font-weight: 700; letter-spacing: 0.01em; }
+.tile .tlabel { font-size: 11px; color: var(--muted); margin-left: auto;
+  letter-spacing: 0.03em; }
+.stats-foot { display: flex; align-items: baseline; justify-content: space-between;
+  padding-top: 10px; border-top: 1px solid var(--glass-brd); }
+
+/* ============================================================
+   Skeleton loaders
+   ============================================================ */
+@keyframes shimmer { 0% { opacity: 0.35; } 50% { opacity: 0.7; } 100% { opacity: 0.35; } }
+.skeleton-row, .skeleton-tile, .skeleton-text {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-row { height: 38px; margin: 6px 0; }
+.skeleton-tile { height: 42px; }
+.skeleton-text { display: inline-block; width: 140px; height: 12px;
+  border-radius: 4px; }
+
+/* Empty-state hint inside lists */
+.empty { padding: 16px 10px; font-size: 12px; color: var(--muted);
+  text-align: center; }
+
+/* ============================================================
+   Intro / instructions modal
+   ============================================================ */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Subtle darkening of the whole app behind the modal */
+  background: rgba(5, 8, 7, 0.55);
+  backdrop-filter: blur(3px) saturate(120%);
+  -webkit-backdrop-filter: blur(3px) saturate(120%);
+  animation: fade-in 0.25s ease;
+}
+.intro-overlay.hidden { display: none; }
+
+.intro-modal {
+  width: 480px;
+  max-width: calc(100vw - 48px);
+  padding: 30px 32px 28px;
+  animation: pop-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.intro-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted);
+}
+.intro-title {
+  font-size: 24px; font-weight: 600; letter-spacing: 0.02em;
+  margin: 12px 0 10px; color: var(--text); text-transform: none;
+}
+.intro-lead { font-size: 13px; line-height: 1.55; color: var(--text);
+  margin: 0 0 16px; }
+.intro-list { margin: 0 0 16px; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 10px; }
+.intro-list li {
+  position: relative; padding-left: 18px;
+  font-size: 12.5px; line-height: 1.5; color: var(--muted);
+}
+.intro-list li::before {
+  content: ""; position: absolute; left: 0; top: 7px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--low); box-shadow: 0 0 8px var(--low);
+}
+.intro-list b { color: var(--text); font-weight: 600; }
+.intro-note {
+  font-size: 11px; line-height: 1.5; color: var(--muted);
+  padding-top: 14px; margin: 0 0 20px;
+  border-top: 1px solid var(--glass-brd);
+}
+.intro-btn {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
+  color: #0a0e0c;
+  background: var(--low);
+  border: none; border-radius: 12px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.intro-btn:hover { filter: brightness(1.08); }
+.intro-btn:active { transform: scale(0.99); }
