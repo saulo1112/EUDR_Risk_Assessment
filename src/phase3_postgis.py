@@ -41,6 +41,7 @@ farms = gpd.read_file("data/farms.geojson")[["farm_id", "area_ha", "geometry"]]
 farms = farms.rename_geometry("geom")  # match the 'geom' column in our schema
 farms.to_postgis("farms", engine, if_exists="append", index=False)
 print(f"Loaded {len(farms)} farms.")
+
 # 3. Load risk/deforestation results
 risk = pd.read_csv("data/farms_risk_raw.csv")[
     ["farm_id", "defo_m2", "total_m2", "defo_pct"]
