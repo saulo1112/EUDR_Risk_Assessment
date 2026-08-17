@@ -1,0 +1,53 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: [src/frontend/**, .github/workflows/deploy-pages.yml]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage frontend
+        run: |
+          mkdir -p _site
+          cp src/frontend/index.html src/frontend/style.css src/frontend/app.js _site/
+
+      - name: Generate config.js from the deployed API URL
+        # API_BASE_URL is a repository VARIABLE (Settings -> Secrets and
+        # variables -> Actions -> Variables), not a secret: it is the public
+        # Render API URL and ends up in a client-side file regardless. If it
+        # is unset, config.js keeps the localhost default from the repo copy,
+        # which only works when the API also runs locally.
+        run: |
+          if [ -n "${{ vars.API_BASE_URL }}" ]; then
+            echo "window.API_BASE = \"${{ vars.API_BASE_URL }}\";" > _site/config.js
+          else
+            cp src/frontend/config.js _site/config.js
+            echo "::warning::API_BASE_URL repository variable is not set — the deployed dashboard will try to reach localhost:8000."
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

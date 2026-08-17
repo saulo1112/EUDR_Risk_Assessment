@@ -1,0 +1,24 @@
+# Keep the build context small: the API image needs only src/api + pyproject,
+# and the frontend image only src/frontend.
+.venv/
+.git/
+.github/
+__pycache__/
+*.py[cod]
+
+# Large data artefacts — the database is seeded from docker/init instead.
+data/
+docker/init/
+
+# Not needed at runtime
+docs/
+notebooks/
+tests/
+scripts/
+src/pipeline/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.md
+.env

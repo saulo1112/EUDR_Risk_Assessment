@@ -1,0 +1,37 @@
+# Render Blueprint — deploys the API + a PostGIS-enabled Postgres database.
+#
+# One-time setup (Render dashboard, requires a Render account):
+#   New + -> Blueprint -> connect this repo -> Apply.
+# Render reads this file and provisions both resources on the free tier.
+#
+# The database is provisioned EMPTY — Render's managed Postgres has no
+# equivalent to docker-entrypoint-initdb.d, so the seed is loaded once by hand
+# after the first deploy. See the "Deploying" section in README.md for the
+# exact commands (enable the postgis extension, then load
+# docker/init/20_eudr_risk.sql.gz via psql).
+#
+# Free-tier caveats worth knowing before linking this in an application:
+#   - the database is deleted after 90 days on the free plan;
+#   - the free web service spins down after 15 min idle, so the first request
+#     after a quiet period takes ~30-50s to cold-start.
+
+databases:
+  - name: eudr-risk-db
+    databaseName: eudr_risk
+    user: eudr
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: eudr-risk-api
+    runtime: docker
+    dockerfilePath: ./src/api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eudr-risk-db
+          property: connectionString

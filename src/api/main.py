@@ -17,8 +17,14 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 from src.api.database import get_connection
-from src.api.schemas import (Feature, FeatureCollection, FarmProperties,
-                             RiskClass, RiskClassStat, StatsResponse)
+from src.api.schemas import (
+    FarmProperties,
+    Feature,
+    FeatureCollection,
+    RiskClass,
+    RiskClassStat,
+    StatsResponse,
+)
 
 app = FastAPI(
     title="EUDR Forest Risk Assessment API",

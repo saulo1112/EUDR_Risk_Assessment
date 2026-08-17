@@ -2,7 +2,7 @@
 
 ## Problem
 
-The v2 scorer ([`src/phase4_scoring.py`](../src/phase4_scoring.py)) trained a
+The v2 scorer ([`src/pipeline/legacy/phase4_scoring.py`](../src/pipeline/legacy/phase4_scoring.py)) trained a
 `RandomForestClassifier` on `X = [area_ha, neighborhood_defo_pct]` to predict a
 risk class derived from each parcel's **own** post-2020 `defo_pct`, evaluated on
 a single 75/25 split. It performed poorly and unstably:
@@ -32,10 +32,10 @@ target, never as a feature):
 - `area_ha` — parcel size.
 - `nb_defo_pct_{200,500,1000}` — % deforestation in concentric rings around the
   parcel, each ring excluding the parcel itself
-  ([`src/phase4_neighborhood_multi.py`](../src/phase4_neighborhood_multi.py)).
+  ([`src/pipeline/phase4_neighborhood_multi.py`](../src/pipeline/phase4_neighborhood_multi.py)).
 - `dist_to_defo_m` — distance from the parcel centroid to the nearest post-2020
   deforestation pixel, via Earth Engine `fastDistanceTransform`, capped at
-  2,560 m ([`src/phase4_distance.py`](../src/phase4_distance.py)).
+  2,560 m ([`src/pipeline/phase4_distance.py`](../src/pipeline/phase4_distance.py)).
 
 **Evaluation** — `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
 with `cross_val_predict`. Binary variants report ROC-AUC, PR-AUC
@@ -115,7 +115,7 @@ macro-F1 0.48 → 0.64.
 
 ## Deliverable
 
-[`src/phase4_scoring_v3.py`](../src/phase4_scoring_v3.py) refits the chosen
+[`src/pipeline/phase4_scoring_v3.py`](../src/pipeline/phase4_scoring_v3.py) refits the chosen
 binary RF on all 4,170 parcels and updates the `assessments` table:
 - `risk_score` = model `P(AFFECTED)` for every parcel (0–1, rounded 4 dp);
 - `risk_class` = the rule-based ground-truth label (unchanged convention).
@@ -166,7 +166,7 @@ could be the parcel's own deforestation, partially encoding the label — unlike
 in the original CSV are the clearest case: their centroid sits on a within-parcel
 defo pixel.
 
-**Method.** [`src/phase4_distance_masked.py`](../src/phase4_distance_masked.py)
+**Method.** [`src/pipeline/phase4_distance_masked.py`](../src/pipeline/phase4_distance_masked.py)
 recomputes the feature for AFFECTED parcels only (CLEAN parcels are unaffected,
 so their values are copied unchanged). Each of the 70 AFFECTED parcels is
 processed individually: the parcel geometry is painted to 0 in `defo_post2020`

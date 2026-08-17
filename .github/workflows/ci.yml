@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint and unit/API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Unit and API tests
+        # Excludes integration tests (no database in this job) via the
+        # 'not integration' marker configured in pyproject.toml.
+        run: uv run pytest -q
+
+  integration:
+    name: Integration tests (seeded PostGIS)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: eudr
+          POSTGRES_PASSWORD: eudr_dev_password
+          POSTGRES_DB: eudr_risk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eudr -d eudr_risk"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Seed the database
+        # The service container does not run docker-entrypoint-initdb.d, so the
+        # same seed dump is loaded explicitly here.
+        env:
+          PGPASSWORD: eudr_dev_password
+        run: |
+          gunzip -c docker/init/20_eudr_risk.sql.gz \
+            | psql -h localhost -U eudr -d eudr_risk -v ON_ERROR_STOP=1 -q
+
+      - name: Integration tests
+        env:
+          DATABASE_URL: postgresql://eudr:eudr_dev_password@localhost:5432/eudr_risk
+        run: uv run pytest -m integration -q

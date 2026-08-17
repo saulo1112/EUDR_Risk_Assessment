@@ -1,6 +1,11 @@
 # Unified EUDR Risk demo stack: PostGIS + FastAPI + static dashboard.
+#
 # Run from the repo root:
 #   docker compose -f docker/docker-compose.yml up --build
+#
+# Host ports are configurable if any are already taken on your machine:
+#   API_PORT=8001 FRONTEND_PORT=8081 docker compose -f docker/docker-compose.yml up
+#
 # Build contexts are ".." (the repo root) since this file lives in docker/.
 
 services:
@@ -8,18 +13,19 @@ services:
     image: postgis/postgis:16-3.4
     container_name: eudr_postgis
     environment:
-      POSTGRES_USER: eudr
-      POSTGRES_PASSWORD: eudr_dev_password
-      POSTGRES_DB: eudr_risk
+      POSTGRES_USER: ${POSTGRES_USER:-eudr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eudr_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-eudr_risk}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Seed scripts auto-load on FIRST start (empty volume). 20_* runs after
-      # the image's own postgis init. Self-contained: no pipeline/EE needed.
+      # Seed scripts auto-load on FIRST start (empty volume) only. 20_* runs
+      # after the image's own postgis init; the .sql.gz is decompressed by the
+      # entrypoint. Self-contained: no pipeline run or Earth Engine needed.
       - ./init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eudr -d eudr_risk"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eudr} -d ${POSTGRES_DB:-eudr_risk}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -31,9 +37,9 @@ services:
     container_name: eudr_api
     environment:
       # Point at the db SERVICE name on the compose network, not localhost.
-      DATABASE_URL: postgresql://eudr:eudr_dev_password@db:5432/eudr_risk
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eudr}:${POSTGRES_PASSWORD:-eudr_dev_password}@db:5432/${POSTGRES_DB:-eudr_risk}
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -50,10 +56,11 @@ services:
       dockerfile: src/frontend/Dockerfile
     container_name: eudr_frontend
     environment:
-      # The browser runs on the HOST, so it reaches the API via the host port.
-      API_BASE_URL: http://localhost:8000
+      # The browser runs on the HOST, so it reaches the API through the host
+      # port, not the internal service name.
+      API_BASE_URL: http://localhost:${API_PORT:-8000}
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       api:
         condition: service_started

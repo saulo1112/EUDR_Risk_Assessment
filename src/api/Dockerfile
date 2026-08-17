@@ -21,11 +21,17 @@ RUN uv pip install --system --no-cache \
     "psycopg2-binary>=2.9.0" \
     "python-dotenv>=1.0.0"
 
-# Application code (src.api.main:app imports src.api.*).
+# Application code. src.api.database reads its settings from src.config, so
+# that module is required too; the pipeline packages are not.
 COPY src/__init__.py ./src/__init__.py
+COPY src/config.py ./src/config.py
 COPY src/api ./src/api
 
 EXPOSE 8000
 
-# DATABASE_URL is provided by docker-compose (points at the db service).
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# DATABASE_URL is provided by docker-compose (points at the db service) or by
+# the hosting platform (e.g. Render's fromDatabase binding). PORT is injected
+# by platforms like Render, which assign the listen port at deploy time; the
+# shell form lets ${PORT} expand, falling back to 8000 for local/compose use
+# where PORT is unset.
+CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

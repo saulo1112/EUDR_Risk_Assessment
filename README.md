@@ -1,14 +1,31 @@
 # EUDR Forest Risk Assessment Tool
 
+[![CI](https://github.com/sauloquinones/eudr-risk-assessment/actions/workflows/ci.yml/badge.svg)](https://github.com/sauloquinones/eudr-risk-assessment/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 An open-source geospatial pipeline that screens agricultural parcels for
 deforestation risk under the EU Deforestation Regulation (EUDR) — combining
 satellite-derived land-cover probability, forest-loss detection, and a
 machine-learning risk model, served through a REST API and an interactive
 map dashboard.
 
+<!-- Screenshot: start the stack, open http://localhost:8080, capture the
+     dashboard and save it as docs/img/dashboard.png, then uncomment the line
+     below. Placed here because it is the first thing a reader should see.
+![EUDR risk dashboard](docs/img/dashboard.png)
+-->
+
 > Inspired by commercial EUDR compliance platforms (e.g. LiveEO's
 > TradeAware), this project implements a simplified, fully open-data
 > proof-of-concept of the core geospatial deforestation-risk pipeline.
+
+**Try it in one command:**
+`docker compose -f docker/docker-compose.yml up --build` → dashboard on
+[localhost:8080](http://localhost:8080), API docs on
+[localhost:8000/docs](http://localhost:8000/docs). The database ships
+pre-seeded, so no Earth Engine credentials are needed to run the demo.
 
 ## Why this project
 
@@ -31,6 +48,8 @@ pipeline end-to-end, using only open, official datasets.
 - Risk model improved from macro-F1 0.43 to 0.84 (binary) through a
   documented, honest iteration process (v1 → v2 → v3).
 - REST API (FastAPI) + interactive map dashboard (Leaflet, glass UI).
+- Reproducible: one `docker compose up` starts a pre-seeded PostGIS, the API and
+  the dashboard; 72 tests (unit, API and integration) plus a lint gate run in CI.
 
 ## Architecture
 
@@ -71,32 +90,42 @@ Forest Data Partnership (Côte d'Ivoire, Ghana, Indonesia, Ecuador, Peru).
 | Machine learning | scikit-learn (Random Forest, Logistic Regression) |
 | API | FastAPI, SQLAlchemy, GeoAlchemy2 |
 | Frontend | HTML / CSS / JS, Leaflet |
-| Environment | uv (pyproject.toml) |
+| Tooling | uv, pytest, ruff, GitHub Actions |
 
 ## Project structure
 
 ```
 .
-├── data/                          # GeoJSON / CSV intermediate outputs
+├── data/                            # GeoJSON / CSV pipeline outputs
 ├── docs/
-│   ├── PIPELINE.md                # canonical run order + diagnostic scripts
-│   ├── CODE_AUDIT.md              # pre-Phase-7 code review
-│   └── phase4_model_comparison.md # full model comparison + sensitivity check
+│   ├── PIPELINE.md                  # canonical run order + shared modules
+│   ├── CODE_AUDIT.md                # self-review: resolved and open findings
+│   ├── phase4_model_comparison.md   # model comparison + leakage sensitivity check
+│   └── img/
 ├── docker/
-│   ├── docker-compose.yml         # db + api + frontend stack
-│   └── init/                      # SQL seed (4,170 scored parcels), auto-loaded
+│   ├── docker-compose.yml           # db + api + frontend stack
+│   └── init/20_eudr_risk.sql.gz     # seed: 4,170 scored parcels, auto-loaded
 ├── src/
-│   ├── phase1_aoi_parcels.py
-│   ├── phase2_deforestation.py
-│   ├── phase3_postgis.py
-│   ├── phase4_scoring.py          # v2 (superseded, kept for documentation)
-│   ├── phase4_distance.py
-│   ├── phase4_neighborhood_multi.py
-│   ├── phase4_scoring_v3.py       # final model
-│   ├── api/                       # FastAPI app (+ Dockerfile)
-│   └── frontend/                  # static map dashboard (+ Dockerfile)
-└── pyproject.toml
+│   ├── config.py                    # single source of truth for settings
+│   ├── pipeline/
+│   │   ├── earth_engine.py          # EUDR reference layers, defined once
+│   │   ├── scoring.py               # pure model logic (side-effect free)
+│   │   ├── phase1_aoi_parcels.py … phase4_scoring_v3.py
+│   │   └── legacy/                  # superseded v2 model, kept as a record
+│   ├── api/                         # FastAPI app (+ Dockerfile)
+│   └── frontend/                    # static map dashboard (+ Dockerfile)
+├── scripts/                         # ad-hoc connectivity / sanity checks
+├── tests/                           # unit, API and integration tests
+└── .github/workflows/ci.yml
 ```
+
+Two design choices worth calling out:
+
+- **`src/pipeline/scoring.py` holds the model logic with no side effects**, so it
+  can be unit-tested without a database or Earth Engine. The `phase*` scripts are
+  thin orchestrators that do their work inside `main()`.
+- **`src/config.py` is the only place** connection strings, the Earth Engine
+  project and model thresholds are defined; everything is environment-overridable.
 
 ## Getting started
 
@@ -130,41 +159,140 @@ the dashboard's API base URL is injected at container start via `API_BASE_URL`.
 To reset to a clean slate (re-load the seed): `docker compose -f
 docker/docker-compose.yml down -v` then `up --build` again.
 
+If any of those ports are already in use, override them without editing the
+compose file:
+
+```bash
+API_PORT=8001 FRONTEND_PORT=8081 DB_PORT=5433 \
+  docker compose -f docker/docker-compose.yml up --build
+```
+
 ### Full pipeline (regenerate data from Earth Engine)
 
 Use this only to rebuild the datasets from scratch. Requires Python 3.10+,
 [uv](https://docs.astral.sh/uv/), Docker Desktop, and a Google Earth Engine
 account with a linked Google Cloud project.
 
+**1. Install dependencies and authenticate with Earth Engine:**
+
 ```bash
 uv sync
 uv run python -c "import ee; ee.Authenticate()"
-docker compose -f docker/docker-compose.yml up -d db   # PostGIS only
 ```
 
-Then run the pipeline in order (see [`docs/PIPELINE.md`](docs/PIPELINE.md) for
-the full contract and the diagnostic/superseded scripts):
+**2. Start PostGIS and keep it running** in its own terminal (or as a
+background/detached process) for the rest of this section — every step below
+connects to it over `localhost:5432`:
 
 ```bash
-uv run python src/phase1_aoi_parcels.py        # -> data/farms.geojson
-uv run python src/phase2_deforestation.py      # -> data/farms_risk_raw.csv
-uv run python src/phase3_postgis.py            # loads PostGIS
-uv run python src/phase4_distance.py           # -> data/farms_distance.csv
-uv run python src/phase4_neighborhood_multi.py # -> data/farms_neighborhood_multi.csv
-uv run python src/phase4_scoring_v3.py         # trains model, updates risk_score/risk_class
+docker compose -f docker/docker-compose.yml up -d db   # PostGIS only, detached
+docker compose -f docker/docker-compose.yml ps         # confirm "db" is Up/healthy
 ```
 
-Run the API and dashboard directly (without their containers):
+**3. Run the pipeline in order** (see [`docs/PIPELINE.md`](docs/PIPELINE.md)
+for the full data contract and the diagnostic/superseded scripts). Scripts run
+as modules so their absolute imports resolve:
+
+```bash
+uv run python -m src.pipeline.phase1_aoi_parcels        # -> data/farms.geojson
+uv run python -m src.pipeline.phase2_deforestation      # -> data/farms_risk_raw.csv
+uv run python -m src.pipeline.phase3_postgis            # loads PostGIS
+uv run python -m src.pipeline.phase4_distance           # -> data/farms_distance.csv
+uv run python -m src.pipeline.phase4_neighborhood_multi # -> data/farms_neighborhood_multi.csv
+uv run python -m src.pipeline.phase4_scoring_v3         # trains model, writes risk_score/risk_class
+```
+
+**4. Run the API and dashboard directly** (without their containers). The `db`
+container from step 2 must still be running — the API will fail with
+`psycopg2.OperationalError: connection refused` on `localhost:5432` if it
+isn't:
 
 ```bash
 uv run uvicorn src.api.main:app --reload                       # http://localhost:8000/docs
 uv run python -m http.server 8080 --directory src/frontend     # http://localhost:8080
 ```
 
+> **Troubleshooting:** if `/stats`, `/farms`, or `/early-warning` return a
+> `500` with `connection to server at "localhost" ... Connection refused`,
+> PostGIS isn't running. Run
+> `docker compose -f docker/docker-compose.yml up -d db` and retry — no need
+> to restart uvicorn, it reconnects on the next request.
+
 To refresh the Docker seed after regenerating data:
-`docker exec eudr_postgis pg_dump -U eudr -d eudr_risk --no-owner --no-privileges
--t public.farms -t public.assessments > docker/init/20_eudr_risk.sql` (then
-re-add the `CREATE EXTENSION IF NOT EXISTS postgis;` header).
+
+```bash
+{ echo "CREATE EXTENSION IF NOT EXISTS postgis;"; \
+  docker exec eudr_postgis pg_dump -U eudr -d eudr_risk \
+    --no-owner --no-privileges -t public.farms -t public.assessments; \
+} | gzip -9 > docker/init/20_eudr_risk.sql.gz
+```
+
+The `CREATE EXTENSION` header is prepended because the dump is restricted to the
+two application tables, and the file is gzipped (2.9 MB instead of 24 MB) —
+PostgreSQL's entrypoint decompresses `.sql.gz` seeds natively.
+
+## Deploying
+
+GitHub Pages only serves static files, so it can host the dashboard
+(`src/frontend/`) but not the API or PostGIS. A full live demo therefore needs
+two pieces: the backend on a platform that runs containers ([Render](https://render.com)
+is used here — its free tier includes a Postgres database with PostGIS support
+and a web service), and the frontend on GitHub Pages, pointed at that backend.
+
+**1. Deploy the API + database to Render**
+
+- Push this repo to GitHub, then in Render: **New +** → **Blueprint** → select
+  the repo. Render reads [`render.yaml`](render.yaml) and provisions both
+  resources (free tier) automatically.
+- Render's managed Postgres has no equivalent to
+  `docker-entrypoint-initdb.d`, so the seed is loaded once by hand after the
+  database is up — grab its **External Database URL** from the Render
+  dashboard and run:
+
+  ```bash
+  psql "$RENDER_EXTERNAL_DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+  gunzip -c docker/init/20_eudr_risk.sql.gz | psql "$RENDER_EXTERNAL_DATABASE_URL"
+  ```
+
+- Once the API service finishes deploying, note its public URL
+  (`https://eudr-risk-api-xxxx.onrender.com`) and confirm `/stats` responds.
+
+**2. Deploy the dashboard to GitHub Pages**
+
+- Repo **Settings → Pages** → set **Source** to **GitHub Actions**.
+- Repo **Settings → Secrets and variables → Actions → Variables** → add a
+  repository variable `API_BASE_URL` set to the Render API URL from step 1.
+- Push to `main` (or run the *Deploy frontend to GitHub Pages* workflow
+  manually from the **Actions** tab). It regenerates `config.js` with that URL
+  and publishes `src/frontend/` — see
+  [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml).
+- The dashboard is then live at `https://<username>.github.io/<repo>/`. CORS
+  needs no changes: the API already allows any origin (`allow_origins=["*"]`
+  in `src/api/main.py`).
+
+**Free-tier caveats** worth knowing before sharing the link: Render's free
+Postgres is deleted after 90 days of the plan being active, and the free web
+service spins down after 15 minutes idle — the first request after a quiet
+period takes 30-50s to cold-start rather than failing.
+
+## Testing
+
+```bash
+uv run pytest                  # unit + API tests — no database or GEE needed
+uv run pytest -m integration   # integration tests — needs the seeded db container
+uv run ruff check .            # lint
+```
+
+| Suite | Scope |
+|---|---|
+| `tests/test_scoring.py` | Pure model logic: `classify()` boundaries, label framings, feature-set integrity (including a guard that no variant leaks the label), model reproducibility |
+| `tests/test_schemas.py` | Pydantic response contracts and GeoJSON serialization |
+| `tests/test_api.py` | Every endpoint via `TestClient`, with the database dependency replaced by an in-memory fake: filtering, pagination, 404s, aggregation, CORS |
+| `tests/test_integration_db.py` | Dataset invariants against real PostGIS: 4,170 parcels, class distribution, scores as probabilities, `risk_class` consistent with `defo_pct`, valid EPSG:4326 geometries |
+
+Integration tests are opt-in through the `integration` marker, so `pytest` stays
+green on a machine with no infrastructure. CI runs both
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Methodology summary
 
@@ -244,6 +372,13 @@ Interactive documentation at `/docs` (Swagger UI).
   features.
 - `dist_to_defo_m` is capped at 2,560 m — an arbitrary modeling choice,
   documented in `docs/phase4_model_comparison.md`.
+- **87% of parcel polygons have self-intersecting rings**, a known artefact of
+  vectorizing a 10 m raster (pixel outlines touch at diagonal corners). It does
+  not affect the results reported here — areas come from pixel counts, features
+  are computed in Earth Engine, and GeoJSON serialization is unaffected — but it
+  would need `ST_MakeValid` before any spatial-overlay analysis. Surfaced by the
+  integration tests and documented in
+  [`docs/CODE_AUDIT.md`](docs/CODE_AUDIT.md).
 
 ## Scope
 
@@ -264,3 +399,13 @@ production system.
 - [Copernicus Sentinel-2](https://sentinel.esa.int/) — visual verification
 - [USDOS LSIB](https://earthengine.google.com/) — Colombia administrative
   boundary
+
+## Contributing
+
+Development setup, checks and project conventions are in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE) — the code is open source. The underlying datasets keep their own
+licences (see *Data sources* above).
