@@ -1,8 +1,8 @@
-"""EUDR Forest Risk Assessment — FastAPI backend.
+"""EUDR Forest Risk Assessment: FastAPI backend.
 
 Exposes the PostGIS ``farms`` + ``assessments`` data (4,170 cocoa parcels in the
-Alto Sinú / Paramillo AOI, Colombia) as GeoJSON, ready for a future map
-dashboard (Phase 6) and Docker deployment (Phase 7).
+Alto Sinú / Paramillo AOI, Colombia) as GeoJSON for the map dashboard in
+``src/frontend``.
 
 Run locally:
     uv run uvicorn src.api.main:app --reload
@@ -31,14 +31,15 @@ app = FastAPI(
     description=(
         "Serves deforestation-risk assessments for cocoa parcels in the "
         "Alto Sinú / Paramillo AOI (Colombia). Geometries are returned as "
-        "GeoJSON. The flagship endpoint is **/early-warning**: parcels that are "
+        "GeoJSON. The core endpoint is **/early-warning**: parcels that are "
         "clean today but carry an elevated modelled risk."
     ),
     version="1.0.0",
 )
 
-# Allow any origin so a future Streamlit/Leaflet frontend can call the API
-# directly. Fine for this demo; tighten before any real deployment.
+# Allow any origin so the static dashboard (src/frontend, served separately
+# from GitHub Pages or nginx) can call the API directly. Fine for this demo;
+# tighten before any real deployment.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -174,8 +175,8 @@ def early_warning(
     limit: int = Query(10, ge=1, le=4100,
                        description="Number of top candidates to return."),
 ) -> FeatureCollection:
-    """The flagship product: LOW-risk_class parcels (clean today) ranked by
-    descending modelled risk_score — i.e. clean parcels surrounded by recent
+    """The core product output: LOW-risk_class parcels (clean today) ranked by
+    descending modelled risk_score, i.e. clean parcels surrounded by recent
     deforestation that warrant closer monitoring."""
     sql = (_SELECT
            + " WHERE a.risk_class = 'LOW'"

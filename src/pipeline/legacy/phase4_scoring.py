@@ -1,4 +1,4 @@
-"""SUPERSEDED — the Phase 4 "v2" model, kept for documentation only.
+"""SUPERSEDED: the Phase 4 "v2" model, kept for documentation only.
 
 RandomForest on ``[area_ha, neighborhood_defo_pct]`` (200 m ring) with a single
 train/test split. It scored macro-F1 = 0.43: honest (no target leakage) but
@@ -10,7 +10,7 @@ stratified 5-fold cross-validation. This script also writes the now-unused
 ``data/farms_neighborhood.csv`` (200 m only); v3 reads
 ``data/farms_neighborhood_multi.csv`` instead.
 
-NOT part of the canonical pipeline — do not run it for a fresh build. See
+NOT part of the canonical pipeline, do not run it for a fresh build. See
 ``docs/PIPELINE.md`` for the run order and ``docs/phase4_model_comparison.md``
 for the full v1 -> v2 -> v3 progression.
 """

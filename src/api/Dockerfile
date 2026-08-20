@@ -1,4 +1,4 @@
-# EUDR Risk API — FastAPI served by uvicorn.
+# EUDR Risk API: FastAPI served by uvicorn.
 # Build context is the repo root (see docker/docker-compose.yml).
 FROM python:3.11-slim
 
@@ -9,7 +9,7 @@ WORKDIR /app
 
 # pyproject.toml is copied for reference/provenance. The full project pins
 # heavy geospatial/ML deps (earthengine, geemap, rasterio, geopandas) that are
-# only used by the OFFLINE pipeline — the API needs none of them at runtime.
+# only used by the OFFLINE pipeline; the API needs none of them at runtime.
 # We therefore install just the API subset to keep the image small and fast.
 # (Versions mirror the relevant entries in pyproject.toml.)
 COPY pyproject.toml ./

@@ -4,7 +4,7 @@ Self-review of the pipeline, API and frontend, first run before Phase 7 (the
 Docker stack) and updated after the follow-up hardening pass. Findings are
 grouped by severity, with the resolved ones marked.
 
-## Data contract — consistent end-to-end
+## Data contract: consistent end to end
 
 No mismatches between what each phase writes and what the next one reads:
 
@@ -30,7 +30,7 @@ agrees with `defo_pct`, and that geometries are valid EPSG:4326.
   `integration` marker.
 - ✅ **No pipeline script was importable.** None had an
   `if __name__ == "__main__"` guard, so importing any of them opened database
-  connections and initialised Earth Engine — which is what made the logic
+  connections and initialised Earth Engine, which is what made the logic
   untestable. Every script now does its work inside `main()`, and the pure model
   logic lives in [`src/pipeline/scoring.py`](../src/pipeline/scoring.py), which
   imports with no side effects.
@@ -44,7 +44,7 @@ agrees with `defo_pct`, and that geometries are valid EPSG:4326.
   cocoa threshold (twice in phase 1) now come from `src/config.py`.
 - ✅ **No CI, no linting.** `.github/workflows/ci.yml` runs ruff plus the test
   suite, with a second job that seeds PostGIS and runs the integration tests.
-- ✅ **No LICENSE** despite the README calling the project open-source — MIT
+- ✅ **No LICENSE** despite the README calling the project open source. MIT
   added.
 - ✅ **No `.dockerignore`.** Build contexts pulled in `.venv/`, `data/` (56 MB)
   and `.git/`. Added, and the SQL seed is now gzipped (24 MB → 2.9 MB).
@@ -61,7 +61,7 @@ agrees with `defo_pct`, and that geometries are valid EPSG:4326.
   asserted geometry validity, and is an artefact of vectorizing a 10 m raster:
   pixel-derived polygons touch at diagonal corners.
 
-  Impact on this project is nil — `area_ha` comes from the pixel count rather
+  Impact on this project is nil: `area_ha` comes from the pixel count rather
   than `ST_Area` (the two agree to within 1.78%), the model features are computed
   in Earth Engine, and `ST_AsGeoJSON` serializes the geometries correctly, so
   both the API and the dashboard are unaffected. It *would* matter for spatial
@@ -73,7 +73,7 @@ agrees with `defo_pct`, and that geometries are valid EPSG:4326.
   the fix; it was left out of this pass because it changes stored geometry and
   the current data is demonstrably fit for purpose.
 
-## Open — nice to have
+## Open, nice to have
 
 - **Frontend partial-failure states.** `loadFarms()` degrades gracefully when the
   API is unreachable, but `loadStats()` and `loadEarlyWarning()` only
@@ -91,15 +91,15 @@ agrees with `defo_pct`, and that geometries are valid EPSG:4326.
 
 ## Accepted for a demo, documented as such
 
-- **CORS `allow_origins=["*"]`** in [`src/api/main.py`](../src/api/main.py) —
+- **CORS `allow_origins=["*"]`** in [`src/api/main.py`](../src/api/main.py):
   intentional so any local frontend origin can call the API. Must be tightened
   before a real deployment.
 - **Default database password** (`eudr_dev_password`) in the compose file and as
   the fallback in `src/config.py`. Environment-overridable, but it ships with a
-  known value — acceptable for a local demo, never for production.
+  known value, acceptable for a local demo, never for production.
 - **`pyproject.toml` is one flat dependency list** mixing the heavy geospatial
   pipeline dependencies (earthengine, geemap, rasterio, geopandas) with the light
   API runtime. `src/api/Dockerfile` therefore installs only the API subset to
   keep the image small; splitting into optional extras would be the cleaner fix.
 - **`data/farms.geojson` (32 MB) stays versioned** so the repo is reproducible
-  without Earth Engine credentials. Git compresses it well — a clone is ~8 MB.
+  without Earth Engine credentials. Git compresses it well, so a clone is only ~8 MB.

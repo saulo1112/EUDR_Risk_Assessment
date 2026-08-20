@@ -57,7 +57,7 @@ class TestBuildLabels:
         assert "risk_class" not in df.columns
 
     def test_binary_split_matches_multiclass(self):
-        # CLEAN must be exactly the LOW set — the two framings agree by design.
+        # CLEAN must be exactly the LOW set: the two framings agree by design.
         df = pd.DataFrame({"defo_pct": [0.0, 0.0, 3.0, 20.0]})
         out = build_labels(df)
         assert ((out["risk_binary"] == "CLEAN") == (out["risk_class"] == "LOW")).all()

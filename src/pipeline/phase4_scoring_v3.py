@@ -1,10 +1,10 @@
-"""Phase 4 v3 — non-leaky risk model with cross-validated model selection.
+"""Phase 4 v3: non-leaky risk model with cross-validated model selection.
 
 Improves on the v2 model (``legacy/phase4_scoring.py``: single train/test split,
 X=[area_ha, neighborhood_defo_pct], unstable macro-F1 = 0.43) by:
 
   * adding spatial-context features that never encode a parcel's own
-    deforestation — multi-radius neighbourhood loss (200/500/1000 m) and
+    deforestation: multi-radius neighbourhood loss (200/500/1000 m) and
     distance from the parcel centroid to the nearest post-2020 loss pixel;
   * evaluating every feature set with stratified 5-fold cross-validation
     instead of one noisy split (only ~70 positives out of 4,170);
@@ -15,8 +15,8 @@ The selected binary model drives the deliverable: ``risk_score`` = P(AFFECTED)
 for every parcel. ``risk_class`` remains the rule-based ground-truth label.
 
 Prerequisites (see docs/PIPELINE.md):
-    uv run python src/pipeline/phase4_distance.py
-    uv run python src/pipeline/phase4_neighborhood_multi.py
+    uv run python -m src.pipeline.phase4_distance
+    uv run python -m src.pipeline.phase4_neighborhood_multi
 """
 
 import pandas as pd

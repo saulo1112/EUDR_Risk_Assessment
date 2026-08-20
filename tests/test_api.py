@@ -1,7 +1,7 @@
 """API endpoint tests.
 
 The database dependency is replaced by an in-memory fake (see conftest.py), so
-these run anywhere — no PostGIS, no Earth Engine, no network.
+these run anywhere: no PostGIS, no Earth Engine, no network.
 """
 
 import json

@@ -1,4 +1,4 @@
-"""Phase 4 feature — distance from each parcel centroid to the nearest
+"""Phase 4 feature: distance from each parcel centroid to the nearest
 post-2020 deforestation pixel.
 
 A non-leaky spatial-context feature: it never reads a parcel's own
@@ -30,7 +30,7 @@ def main() -> None:
 
     # fastDistanceTransform returns squared distance in pixel units, capped at
     # the neighbourhood size; sqrt then scale to metres. Parcels beyond the cap
-    # are simply "far" — the exact value past a few km is not informative.
+    # are simply "far": the exact value past a few km is not informative.
     dist_px = (deforestation_mask()
                .fastDistanceTransform(neighborhood=NEIGHBORHOOD, units="pixels")
                .sqrt().rename("dist_px"))

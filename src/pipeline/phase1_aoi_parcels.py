@@ -1,4 +1,4 @@
-"""Phase 1 — select the study area and derive parcel polygons.
+"""Phase 1: select the study area and derive parcel polygons.
 
 The AOI is chosen programmatically rather than by hand: threshold the Forest
 Data Partnership cocoa-probability raster over Colombia, cluster connected

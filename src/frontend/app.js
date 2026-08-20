@@ -1,5 +1,5 @@
 /* ============================================================
-   EUDR Forest Risk Assessment — frontend logic (vanilla JS)
+   EUDR Forest Risk Assessment: frontend logic (vanilla JS)
    ============================================================ */
 
 // Set by config.js (window.API_BASE); falls back to localhost for local dev.
@@ -53,7 +53,7 @@ function initMap() {
     {
       maxZoom: 19,
       attribution:
-        "Imagery © Esri, Maxar, Earthstar Geographics — EUDR demo",
+        "Imagery © Esri, Maxar, Earthstar Geographics (EUDR demo)",
     }
   ).addTo(map);
 }

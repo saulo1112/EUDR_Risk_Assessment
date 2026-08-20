@@ -1,5 +1,5 @@
 /* ============================================================
-   EUDR Forest Risk Assessment — dark glassmorphic UI
+   EUDR Forest Risk Assessment: dark glassmorphic UI
    ============================================================ */
 
 :root {
@@ -107,7 +107,7 @@ h2 {
 }
 
 /* ============================================================
-   Leaflet zoom controls — glass styled, moved to the right edge
+   Leaflet zoom controls, glass styled, moved to the right edge
    (centered vertically) so they clear the top-left Parcels panel.
    ============================================================ */
 .leaflet-top.leaflet-right { top: 50%; transform: translateY(-50%); }

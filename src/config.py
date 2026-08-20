@@ -29,13 +29,13 @@ EE_PROJECT = os.getenv("EE_PROJECT", "eudr-forest-risk")
 # --------------------------------------------------------------------------- #
 # EUDR reference layers
 # --------------------------------------------------------------------------- #
-#: JRC Global Forest Cover 2020 — the EUDR cutoff-date reference layer.
+#: JRC Global Forest Cover 2020, the EUDR cutoff-date reference layer.
 JRC_GFC2020 = "JRC/GFC2020/V3"
 
-#: UMD/Hansen Global Forest Change — annual forest loss.
+#: UMD/Hansen Global Forest Change, annual forest loss.
 HANSEN_GFC = "UMD/hansen/global_forest_change_2025_v1_13"
 
-#: Hansen ``lossyear`` encodes 2021 as 21 — the first year after the EUDR
+#: Hansen ``lossyear`` encodes 2021 as 21, the first year after the EUDR
 #: cutoff date of 31 December 2020.
 LOSSYEAR_MIN = 21
 
@@ -76,7 +76,7 @@ BATCH_SIZE = 200
 # --------------------------------------------------------------------------- #
 # Risk model (phase 4)
 # --------------------------------------------------------------------------- #
-#: Median ``defo_pct`` among affected parcels — the MEDIUM/HIGH boundary.
+#: Median ``defo_pct`` among affected parcels, the MEDIUM/HIGH boundary.
 DEFO_MEDIAN_AFFECTED = 5.3755
 
 #: Seed used for every model, split and shuffle in the pipeline.

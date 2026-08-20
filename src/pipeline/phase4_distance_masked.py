@@ -1,8 +1,8 @@
-"""Phase 4 diagnostic — distance to deforestation with parcel self-masking.
+"""Phase 4 diagnostic: distance to deforestation with parcel self-masking.
 
 ``phase4_distance.py`` runs the distance transform over the whole deforestation
 image, so for an AFFECTED parcel the nearest pixel may lie *inside* its own
-boundary — partially encoding the label. This script recomputes the feature
+boundary, partially encoding the label. This script recomputes the feature
 with each parcel's own pixels erased first, to quantify that leakage.
 
 CLEAN parcels have no own deforestation to mask, so their values are copied
@@ -10,7 +10,7 @@ unchanged; only the ~70 AFFECTED parcels need a per-parcel Earth Engine call.
 
 Output: ``data/farms_distance_masked.csv`` (farm_id, dist_to_defo_m_masked)
 
-Not part of the canonical pipeline — see docs/PIPELINE.md.
+Not part of the canonical pipeline, see docs/PIPELINE.md.
 """
 
 import ee

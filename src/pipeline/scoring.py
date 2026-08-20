@@ -5,7 +5,7 @@ connection nor initialises Earth Engine, so the logic can be unit-tested in
 isolation. The orchestration (reading PostGIS, writing back risk scores) lives
 in ``phase4_scoring_v3.py``.
 
-None of the features defined here encode a parcel's own ``defo_pct`` — that is
+None of the features defined here encode a parcel's own ``defo_pct``, that is
 the label. See ``docs/phase4_model_comparison.md`` for the leakage analysis.
 """
 

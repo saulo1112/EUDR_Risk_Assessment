@@ -5,8 +5,8 @@ Opt-in, since they need infrastructure:
     docker compose -f docker/docker-compose.yml up -d db
     uv run pytest -m integration
 
-They assert the published dataset invariants — the same numbers quoted in the
-README — so a broken seed or a bad scoring run is caught rather than assumed.
+They assert the published dataset invariants, the same numbers quoted in the
+README, so a broken seed or a bad scoring run is caught rather than assumed.
 """
 
 import pytest
@@ -69,7 +69,7 @@ def test_risk_scores_are_probabilities(connection):
 
 
 def test_risk_class_agrees_with_defo_pct(connection):
-    """LOW must mean zero measured deforestation — the label is rule-based."""
+    """LOW must mean zero measured deforestation, the label is rule-based."""
     inconsistent = connection.execute(text("""
         SELECT COUNT(*) FROM assessments
         WHERE (risk_class = 'LOW' AND defo_pct > 0)
@@ -98,7 +98,7 @@ def test_selfintersecting_rings_are_repairable(connection):
 
     ~87% of parcels (3,655/4,170) fail ST_IsValid with "Ring Self-intersection".
     This is an artefact of vectorizing a 10 m raster: pixel-derived polygons
-    touch at diagonal corners. It does not affect this project's results —
+    touch at diagonal corners. It does not affect this project's results:
     ``area_ha`` comes from the pixel count (not ST_Area), the model features are
     computed in Earth Engine, and ST_AsGeoJSON serializes these geometries fine.
 

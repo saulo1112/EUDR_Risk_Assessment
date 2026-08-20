@@ -40,7 +40,7 @@ jobs:
             echo "window.API_BASE = \"${{ vars.API_BASE_URL }}\";" > _site/config.js
           else
             cp src/frontend/config.js _site/config.js
-            echo "::warning::API_BASE_URL repository variable is not set — the deployed dashboard will try to reach localhost:8000."
+            echo "::warning::API_BASE_URL repository variable is not set, the deployed dashboard will try to reach localhost:8000."
           fi
 
       - name: Upload Pages artifact

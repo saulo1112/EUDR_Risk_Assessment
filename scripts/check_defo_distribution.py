@@ -1,7 +1,7 @@
 """Exploratory check: distribution of ``defo_pct`` among affected parcels.
 
 This is where the MEDIUM/HIGH threshold (``DEFO_MEDIAN_AFFECTED = 5.3755``)
-comes from — the median of the affected subpopulation.
+comes from: the median of the affected subpopulation.
 """
 
 import pandas as pd

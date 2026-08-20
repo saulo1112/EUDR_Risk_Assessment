@@ -1,8 +1,8 @@
-"""Phase 3 — create the PostGIS schema and load parcels + assessments.
+"""Phase 3: create the PostGIS schema and load parcels + assessments.
 
 Idempotent: drops and recreates both tables, then loads the phase 1 geometries
 and the phase 2 deforestation measurements. ``risk_score`` / ``risk_class`` are
-left NULL — phase 4 fills them in.
+left NULL until phase 4 fills them in.
 """
 
 import geopandas as gpd

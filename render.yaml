@@ -1,10 +1,10 @@
-# Render Blueprint — deploys the API + a PostGIS-enabled Postgres database.
+# Render Blueprint: deploys the API + a PostGIS-enabled Postgres database.
 #
 # One-time setup (Render dashboard, requires a Render account):
 #   New + -> Blueprint -> connect this repo -> Apply.
 # Render reads this file and provisions both resources on the free tier.
 #
-# The database is provisioned EMPTY — Render's managed Postgres has no
+# The database is provisioned EMPTY. Render's managed Postgres has no
 # equivalent to docker-entrypoint-initdb.d, so the seed is loaded once by hand
 # after the first deploy. See the "Deploying" section in README.md for the
 # exact commands (enable the postgis extension, then load

@@ -1,4 +1,4 @@
-# Pipeline — canonical run order
+# Pipeline: canonical run order
 
 The offline pipeline regenerates all data from Earth Engine and repopulates
 PostGIS. It is **only** needed to rebuild the dataset from scratch; for a
@@ -51,6 +51,6 @@ dashboard (`src/frontend`) can serve it. Verify with
 > **Note on the distance feature.** The canonical model
 > (`phase4_scoring_v3`) uses the **unmasked** `data/farms_distance.csv`. The
 > masked variant quantifies a small label-leakage effect (PR-AUC 0.846 → 0.812,
-> within CV noise for N=70) — see
+> within CV noise for N=70). See
 > [`phase4_model_comparison.md`](phase4_model_comparison.md). If this pipeline is
 > productionised, swap step 4 for the masked script and re-run step 6.

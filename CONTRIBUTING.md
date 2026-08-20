@@ -21,7 +21,7 @@ Both are enforced by CI (`.github/workflows/ci.yml`).
 
 - **Language**: code, comments and docstrings in English.
 - **Configuration**: never hardcode connection strings, project ids or model
-  constants — add them to [`src/config.py`](src/config.py) and read from there.
+  constants. Add them to [`src/config.py`](src/config.py) and read from there.
 - **Pipeline scripts** must stay importable: put the work inside `main()` behind
   an `if __name__ == "__main__":` guard, so importing a module never opens a
   database connection or contacts Earth Engine. The pure, testable logic belongs
@@ -33,7 +33,7 @@ Both are enforced by CI (`.github/workflows/ci.yml`).
 ## Model changes
 
 The risk model must never consume a parcel's own `defo_pct` (or anything derived
-from it) as a feature — that is the label, and using it produces the target
+from it) as a feature. That is the label, and using it produces the target
 leakage documented in [`docs/phase4_model_comparison.md`](docs/phase4_model_comparison.md).
 `tests/test_scoring.py::TestFeatureSets::test_no_variant_leaks_the_label`
 guards this.

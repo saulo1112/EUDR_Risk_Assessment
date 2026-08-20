@@ -1,4 +1,4 @@
-"""Phase 2 — per-parcel post-2020 deforestation.
+"""Phase 2: per-parcel post-2020 deforestation.
 
 For every parcel, sum the area of pixels that Hansen GFC flags as lost in 2021
 or later and that JRC GFC2020 classified as forest at the EUDR cutoff date.

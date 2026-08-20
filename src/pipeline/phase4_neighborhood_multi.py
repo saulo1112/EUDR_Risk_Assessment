@@ -1,4 +1,4 @@
-"""Phase 4 feature — deforestation share in concentric rings around each parcel.
+"""Phase 4 feature: deforestation share in concentric rings around each parcel.
 
 For each radius R the ring is ``buffer(R) \\ parcel``, so the feature measures
 surrounding deforestation pressure and never encodes the parcel's own loss:

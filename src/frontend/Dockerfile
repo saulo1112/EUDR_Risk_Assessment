@@ -1,4 +1,4 @@
-# EUDR Risk dashboard — static files served by nginx.
+# EUDR Risk dashboard: static files served by nginx.
 # Build context is the repo root (see docker/docker-compose.yml).
 FROM nginx:alpine
 

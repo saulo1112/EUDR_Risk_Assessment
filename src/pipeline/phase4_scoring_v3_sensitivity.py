@@ -1,4 +1,4 @@
-"""Phase 4 diagnostic — original vs self-masked distance feature.
+"""Phase 4 diagnostic: original vs self-masked distance feature.
 
 Re-evaluates the two distance-bearing variants (C: distance only, F: the
 selected full feature set) using the leakage-free ``dist_to_defo_m_masked``

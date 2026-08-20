@@ -6,7 +6,7 @@
 __pycache__/
 *.py[cod]
 
-# Large data artefacts — the database is seeded from docker/init instead.
+# Large data artefacts: the database is seeded from docker/init instead.
 data/
 docker/init/
 
