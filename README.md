@@ -1,6 +1,6 @@
 # EUDR Forest Risk Assessment Tool
 
-[![CI](https://github.com/saulo1112/eudr-risk-assessment/actions/workflows/ci.yml/badge.svg)](https://github.com/sauloquinones/eudr-risk-assessment/actions/workflows/ci.yml)
+[![CI](https://github.com/saulo1112/EUDR_Risk_Assessment/actions/workflows/ci.yml/badge.svg)](https://github.com/sauloquinones/eudr-risk-assessment/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
