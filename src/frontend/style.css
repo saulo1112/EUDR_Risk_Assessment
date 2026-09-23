@@ -107,6 +107,26 @@ h2 {
 }
 
 /* ============================================================
+   Language switch (ES / EN), top-right, above the intro modal
+   ============================================================ */
+.lang-toggle {
+  position: fixed; top: 20px; right: 20px; z-index: 2100;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px;
+  font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  color: var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.lang-toggle:hover { background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.22); }
+.lang-toggle:focus-visible { outline: 2px solid var(--low); outline-offset: 2px; }
+.lang-opt { transition: color 0.15s ease; }
+.lang-opt.is-active { color: var(--low); }
+.lang-sep { opacity: 0.4; }
+
+/* ============================================================
    Leaflet zoom controls, glass styled, moved to the right edge
    (centered vertically) so they clear the top-left Parcels panel.
    ============================================================ */
@@ -130,7 +150,7 @@ h2 {
    Panel positions
    ============================================================ */
 #panel-parcels { top: 20px;    left: 20px;   width: 320px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
-#panel-detail  { top: 20px;    right: 20px;  width: 340px; }
+#panel-detail  { top: 72px;    right: 20px;  width: 340px; }  /* below the language switch */
 #panel-warning { bottom: 20px; left: 50%; transform: translateX(-50%); width: 600px; padding: 12px 18px 14px; }
 #panel-stats   { bottom: 20px; right: 20px;  width: 220px; }
 

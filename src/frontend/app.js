@@ -6,11 +6,128 @@
 const API_BASE = (typeof window !== "undefined" && window.API_BASE)
   || "http://localhost:8000";
 
-// Risk-class presentation config (color, human label, map stroke weight).
+// ============================================================
+// i18n: UI strings in English and Spanish ({name} = placeholder)
+// ============================================================
+const I18N = {
+  en: {
+    "app.title": "EUDR Forest Risk Assessment",
+    "lang.switch": "Cambiar a español",
+    "intro.title": "Forest Risk Assessment",
+    "intro.lead": "An interactive view of EUDR deforestation risk for " +
+      "4,170 cocoa parcels. Each parcel is scored and classified by how " +
+      "exposed it is to recent forest loss.",
+    "intro.browse": "<b>Browse &amp; filter</b> parcels in the top-left " +
+      "panel by compliance status: compliant, needs review, or non-compliant.",
+    "intro.select": "<b>Select a parcel</b> on the map or in any list to " +
+      "inspect its area, deforestation and risk score.",
+    "intro.warning": "<b>Early warning</b> (bottom) flags compliant parcels " +
+      "with elevated modeled risk, the priorities for review.",
+    "intro.overview": "<b>Overview</b> (bottom-right) summarizes counts and " +
+      "total area.",
+    "intro.note": "The risk score is a prioritization aid based on spatial " +
+      "deforestation pressure, not an EUDR compliance verdict.",
+    "intro.cta": "Explore the map",
+    "common.loading": "Loading…",
+    "common.close": "Close",
+    "parcels.title": "Parcels",
+    "parcels.toggle": "Toggle list",
+    "parcels.summary": "{count} parcels · {area} ha",
+    "parcels.empty": "No parcels match these filters.",
+    "parcels.apiError": "Could not reach the API on {url}. Is it running?",
+    "parcel.name": "Parcel {id}",
+    "filter.all": "All",
+    "risk.LOW": "Compliant",
+    "risk.MEDIUM": "Needs review",
+    "risk.HIGH": "Non-compliant",
+    "metric.area": "Area",
+    "metric.deforested": "Deforested",
+    "metric.score": "Risk score",
+    "detail.note": "Risk score reflects proximity to recent forest loss and " +
+      "surrounding deforestation pressure, not an EUDR compliance verdict.",
+    "warning.title": "Early warning",
+    "warning.subtitle": "Compliant parcels with elevated modeled risk, " +
+      "prioritize for review.",
+    "warning.toggle": "Collapse",
+    "warning.colParcel": "Parcel",
+    "warning.empty": "No early-warning parcels.",
+    "stats.title": "Overview",
+    "stats.totalArea": "Total area",
+  },
+  es: {
+    "app.title": "Evaluación de riesgo forestal EUDR",
+    "lang.switch": "Switch to English",
+    "intro.title": "Evaluación de riesgo forestal",
+    "intro.lead": "Una vista interactiva del riesgo de deforestación EUDR " +
+      "para 4.170 parcelas de cacao. Cada parcela recibe una puntuación y se " +
+      "clasifica según su exposición a la pérdida forestal reciente.",
+    "intro.browse": "<b>Explora y filtra</b> las parcelas en el panel " +
+      "superior izquierdo por estado de cumplimiento: conforme, requiere " +
+      "revisión o no conforme.",
+    "intro.select": "<b>Selecciona una parcela</b> en el mapa o en cualquier " +
+      "lista para consultar su área, deforestación y puntuación de riesgo.",
+    "intro.warning": "<b>Alerta temprana</b> (abajo) señala las parcelas " +
+      "conformes con riesgo modelado elevado, las prioridades de revisión.",
+    "intro.overview": "<b>Resumen</b> (abajo a la derecha) muestra los " +
+      "conteos y el área total.",
+    "intro.note": "La puntuación de riesgo es una ayuda para priorizar, " +
+      "basada en la presión espacial de deforestación, no un veredicto de " +
+      "cumplimiento EUDR.",
+    "intro.cta": "Explorar el mapa",
+    "common.loading": "Cargando…",
+    "common.close": "Cerrar",
+    "parcels.title": "Parcelas",
+    "parcels.toggle": "Mostrar u ocultar lista",
+    "parcels.summary": "{count} parcelas · {area} ha",
+    "parcels.empty": "Ninguna parcela coincide con estos filtros.",
+    "parcels.apiError": "No se pudo conectar con la API en {url}. " +
+      "¿Está en ejecución?",
+    "parcel.name": "Parcela {id}",
+    "filter.all": "Todas",
+    "risk.LOW": "Conforme",
+    "risk.MEDIUM": "Requiere revisión",
+    "risk.HIGH": "No conforme",
+    "metric.area": "Área",
+    "metric.deforested": "Deforestado",
+    "metric.score": "Puntuación de riesgo",
+    "detail.note": "La puntuación de riesgo refleja la proximidad a pérdida " +
+      "forestal reciente y la presión de deforestación circundante, no un " +
+      "veredicto de cumplimiento EUDR.",
+    "warning.title": "Alerta temprana",
+    "warning.subtitle": "Parcelas conformes con riesgo modelado elevado, " +
+      "priorizar para revisión.",
+    "warning.toggle": "Contraer",
+    "warning.colParcel": "Parcela",
+    "warning.empty": "No hay parcelas en alerta temprana.",
+    "stats.title": "Resumen",
+    "stats.totalArea": "Área total",
+  },
+};
+const LOCALES = { en: "en-US", es: "es-CO" };
+const LANG_KEY = "eudr-lang";
+
+// Saved choice first, then the browser language; English otherwise.
+function detectLang() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved in I18N) return saved;
+  } catch (e) { /* storage blocked: fall through */ }
+  const nav = (navigator.languages || [navigator.language || ""])[0] || "";
+  return nav.toLowerCase().startsWith("es") ? "es" : "en";
+}
+
+let lang = detectLang();
+
+function t(key, vars = {}) {
+  const str = I18N[lang][key] ?? I18N.en[key] ?? key;
+  return str.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+
+// Risk-class presentation config (color, label key, map stroke weight).
 const RISK = {
-  LOW:    { color: "#5DCAA5", label: "Compliant",     weight: 2 },
-  MEDIUM: { color: "#F0997B", label: "Needs review",  weight: 3 },
-  HIGH:   { color: "#E24B4A", label: "Non-compliant", weight: 3 },
+  LOW:    { color: "#5DCAA5", key: "risk.LOW",    weight: 2 },
+  MEDIUM: { color: "#F0997B", key: "risk.MEDIUM", weight: 3 },
+  HIGH:   { color: "#E24B4A", key: "risk.HIGH",   weight: 3 },
 };
 const SELECTED_COLOR = "#7F77DD";
 const AOI_CENTER = [8.52, -76.44];
@@ -24,9 +141,16 @@ let allFeatures = [];               // every parcel feature
 let activeFilters = new Set(["LOW", "MEDIUM", "HIGH"]);
 let selectedId = null;
 let listCursor = 0;                 // how many filtered rows are rendered
+let statsData = null;               // last /stats payload (re-render on lang)
+let warningData = null;             // last /early-warning payload
+let farmsError = false;             // /farms failed: list shows the error
 
 // ---- Small helpers ----
-const fmt = (n) => Number(n).toLocaleString("en-US");
+// Locale-aware number with a fixed number of decimals (default: integer).
+const fmt = (n, digits = 0) => Number(n).toLocaleString(LOCALES[lang], {
+  minimumFractionDigits: digits,
+  maximumFractionDigits: digits,
+});
 const $ = (sel) => document.querySelector(sel);
 
 async function getJSON(path) {
@@ -106,18 +230,18 @@ function selectParcel(farmId, { fly = true } = {}) {
 // ============================================================
 function openDetail(p) {
   const cfg = riskCfg(p.risk_class);
-  $("#detail-title").textContent = `Parcel ${p.farm_id}`;
+  $("#detail-title").textContent = t("parcel.name", { id: p.farm_id });
 
   const badge = $("#detail-badge");
   badge.className = `badge ${p.risk_class}`;
   badge.innerHTML =
-    `<span class="dot" style="--c:${cfg.color}"></span>${cfg.label}`;
+    `<span class="dot" style="--c:${cfg.color}"></span>${t(cfg.key)}`;
 
-  $("#detail-area").textContent = `${fmt((p.area_ha ?? 0).toFixed(2))} ha`;
-  $("#detail-defo").textContent = `${(p.defo_pct ?? 0).toFixed(2)}%`;
+  $("#detail-area").textContent = `${fmt(p.area_ha ?? 0, 2)} ha`;
+  $("#detail-defo").textContent = `${fmt(p.defo_pct ?? 0, 2)}%`;
 
   const score = p.risk_score ?? 0;
-  $("#detail-score-val").textContent = score.toFixed(3);
+  $("#detail-score-val").textContent = fmt(score, 3);
   $("#detail-score-bar").style.width = `${Math.max(score * 100, 1.5)}%`;
 
   $("#panel-detail").classList.remove("hidden");
@@ -164,16 +288,17 @@ function rowHTML(p) {
     <div class="parcel-row${p.farm_id === selectedId ? " is-selected" : ""}"
          data-id="${p.farm_id}">
       <div>
-        <div class="pid">Parcel ${p.farm_id}</div>
-        <div class="pmeta">${(p.area_ha ?? 0).toFixed(2)} ha</div>
+        <div class="pid">${t("parcel.name", { id: p.farm_id })}</div>
+        <div class="pmeta">${fmt(p.area_ha ?? 0, 2)} ha</div>
       </div>
       <span class="badge ${p.risk_class}">
-        <span class="dot" style="--c:${cfg.color}"></span>${cfg.label}
+        <span class="dot" style="--c:${cfg.color}"></span>${t(cfg.key)}
       </span>
     </div>`;
 }
 
-function renderList(reset) {
+// `count` lets a re-render (e.g. language switch) keep every loaded page.
+function renderList(reset, count = PAGE_SIZE) {
   const list = $("#parcel-list");
   const feats = filteredFeatures();
 
@@ -182,11 +307,11 @@ function renderList(reset) {
     listCursor = 0;
   }
   if (feats.length === 0) {
-    list.innerHTML = '<div class="empty">No parcels match these filters.</div>';
+    list.innerHTML = `<div class="empty">${t("parcels.empty")}</div>`;
     return;
   }
 
-  const slice = feats.slice(listCursor, listCursor + PAGE_SIZE);
+  const slice = feats.slice(listCursor, listCursor + count);
   list.insertAdjacentHTML(
     "beforeend",
     slice.map((f) => rowHTML(f.properties)).join("")
@@ -254,12 +379,22 @@ function initFilterChips() {
 // Stats panel
 // ============================================================
 async function loadStats() {
-  const s = await getJSON("/stats");
+  statsData = await getJSON("/stats");
+  renderStats();
+}
 
-  // Parcels-panel header summary.
-  $("#parcels-summary").classList.remove("skeleton-text");
-  $("#parcels-summary").textContent =
-    `${fmt(s.total_parcels)} parcels · ${fmt(Math.round(s.total_area_ha))} ha`;
+function renderStats() {
+  const s = statsData;
+
+  // Parcels-panel header summary (drop the static "Loading…" i18n key so a
+  // language switch doesn't bring it back).
+  const summary = $("#parcels-summary");
+  summary.classList.remove("skeleton-text");
+  summary.removeAttribute("data-i18n");
+  summary.textContent = t("parcels.summary", {
+    count: fmt(s.total_parcels),
+    area: fmt(Math.round(s.total_area_ha)),
+  });
 
   // Order tiles HIGH → MEDIUM → LOW for visual priority.
   const order = ["HIGH", "MEDIUM", "LOW"];
@@ -275,7 +410,7 @@ async function loadStats() {
         <div class="tile">
           <span class="dot" style="--c:${cfg.color}"></span>
           <span class="tnum">${fmt(byClass[rc].count)}</span>
-          <span class="tlabel">${cfg.label}</span>
+          <span class="tlabel">${t(cfg.key)}</span>
         </div>`;
     })
     .join("");
@@ -287,17 +422,23 @@ async function loadStats() {
 // Early-warning panel
 // ============================================================
 async function loadEarlyWarning() {
-  const fc = await getJSON("/early-warning?limit=15");
+  warningData = await getJSON("/early-warning?limit=15");
+  renderEarlyWarning();
+}
+
+function renderEarlyWarning() {
+  const fc = warningData;
   const list = $("#warning-list");
 
   if (!fc.features.length) {
-    list.innerHTML = '<div class="empty">No early-warning parcels.</div>';
+    list.innerHTML = `<div class="empty">${t("warning.empty")}</div>`;
     return;
   }
 
   const header =
-    `<div class="warn-head"><span>Parcel</span><span>Area</span>` +
-    `<span>Risk score</span><span></span></div>`;
+    `<div class="warn-head"><span>${t("warning.colParcel")}</span>` +
+    `<span>${t("metric.area")}</span>` +
+    `<span>${t("metric.score")}</span><span></span></div>`;
 
   const rows = fc.features
     .map((f) => {
@@ -306,11 +447,11 @@ async function loadEarlyWarning() {
       return `
         <div class="warn-row${p.farm_id === selectedId ? " is-selected" : ""}"
              data-id="${p.farm_id}">
-          <span class="pid">Parcel ${p.farm_id}</span>
-          <span class="wmeta">${(p.area_ha ?? 0).toFixed(2)} ha</span>
+          <span class="pid">${t("parcel.name", { id: p.farm_id })}</span>
+          <span class="wmeta">${fmt(p.area_ha ?? 0, 2)} ha</span>
           <span class="bar"><span class="bar-fill"
             style="width:${Math.max(score * 100, 2)}%"></span></span>
-          <span class="wscore">${score.toFixed(3)}</span>
+          <span class="wscore">${fmt(score, 3)}</span>
         </div>`;
     })
     .join("");
@@ -324,9 +465,64 @@ async function loadEarlyWarning() {
 }
 
 // ============================================================
+// Language switch
+// ============================================================
+function showFarmsError() {
+  $("#parcel-list").innerHTML =
+    `<div class="empty">${t("parcels.apiError", { url: API_BASE })}</div>`;
+}
+
+// Static markup carries data-i18n (text), data-i18n-html (trusted markup
+// from I18N) and data-i18n-aria (aria-label) keys.
+function applyStaticText() {
+  document.documentElement.lang = lang;
+  document.title = t("app.title");
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+    el.setAttribute("aria-label", t(el.dataset.i18nAria));
+  });
+
+  const toggle = $("#lang-toggle");
+  toggle.setAttribute("aria-label", t("lang.switch"));
+  toggle.querySelectorAll(".lang-opt").forEach((opt) => {
+    opt.classList.toggle("is-active", opt.dataset.lang === lang);
+  });
+}
+
+function setLanguage(next) {
+  lang = next;
+  try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* ignore */ }
+  applyStaticText();
+
+  // Re-render the data-driven panels that have already loaded.
+  if (statsData) renderStats();
+  if (warningData) renderEarlyWarning();
+  if (farmsError) {
+    showFarmsError();
+  } else if (allFeatures.length) {
+    const list = $("#parcel-list");
+    const { scrollTop } = list;
+    renderList(true, Math.max(listCursor, PAGE_SIZE));
+    list.scrollTop = scrollTop;
+  }
+  if (selectedId !== null) {
+    const feature = allFeatures.find((f) => f.properties.farm_id === selectedId);
+    if (feature) openDetail(feature.properties);
+  }
+}
+
+// ============================================================
 // Wiring + boot
 // ============================================================
 function initUI() {
+  $("#lang-toggle").addEventListener("click", () =>
+    setLanguage(lang === "en" ? "es" : "en")
+  );
   $("#detail-close").addEventListener("click", closeDetail);
   $("#parcel-list").addEventListener("scroll", onListScroll);
   $("#warning-toggle").addEventListener("click", () =>
@@ -343,6 +539,7 @@ function initUI() {
 }
 
 async function boot() {
+  applyStaticText();
   initMap();
   initUI();
   // Fire requests in parallel; render each panel as its data arrives.
@@ -352,9 +549,8 @@ async function boot() {
     await loadFarms();
   } catch (e) {
     console.error(e);
-    $("#parcel-list").innerHTML =
-      '<div class="empty">Could not reach the API on ' +
-      `${API_BASE}. Is it running?</div>`;
+    farmsError = true;
+    showFarmsError();
   }
 }
 
