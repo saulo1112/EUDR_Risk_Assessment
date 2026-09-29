@@ -3,7 +3,12 @@ name: Deploy frontend to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: [src/frontend/**, .github/workflows/deploy-pages.yml]
+    paths:
+      - src/frontend/**
+      - scripts/build_static_data.py
+      - data/farms.geojson
+      - docker/init/20_eudr_risk.sql.gz
+      - .github/workflows/deploy-pages.yml
   workflow_dispatch: {}
 
 permissions:
@@ -24,23 +29,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Build static data snapshot
+        # No backend required: precomputes /farms, /stats and /early-warning
+        # straight from the committed pipeline outputs (stdlib only, see the
+        # script's docstring for exactly what it reads).
+        run: python3 scripts/build_static_data.py
+
       - name: Stage frontend
         run: |
-          mkdir -p _site
+          mkdir -p _site/data
           cp src/frontend/index.html src/frontend/style.css src/frontend/app.js _site/
+          cp src/frontend/data/*.json _site/data/
 
-      - name: Generate config.js from the deployed API URL
+      - name: Generate config.js
         # API_BASE_URL is a repository VARIABLE (Settings -> Secrets and
-        # variables -> Actions -> Variables), not a secret: it is the public
-        # Render API URL and ends up in a client-side file regardless. If it
-        # is unset, config.js keeps the localhost default from the repo copy,
-        # which only works when the API also runs locally.
+        # variables -> Actions -> Variables), not a secret: it would be a
+        # public API URL and ends up in a client-side file regardless.
+        #
+        # Unset (the default, and the only option that needs no paid
+        # hosting): the dashboard runs in static mode, reading the
+        # data/*.json snapshot staged above -- no backend at all.
+        # Set: the dashboard instead calls that live API on every load
+        # (e.g. a self-hosted or Render-deployed instance of src/api).
         run: |
           if [ -n "${{ vars.API_BASE_URL }}" ]; then
-            echo "window.API_BASE = \"${{ vars.API_BASE_URL }}\";" > _site/config.js
+            cat > _site/config.js <<EOF
+          window.API_BASE = "${{ vars.API_BASE_URL }}";
+          window.API_STATIC = false;
+          EOF
           else
-            cp src/frontend/config.js _site/config.js
-            echo "::warning::API_BASE_URL repository variable is not set, the deployed dashboard will try to reach localhost:8000."
+            cat > _site/config.js <<EOF
+          window.API_STATIC = true;
+          EOF
           fi
 
       - name: Upload Pages artifact

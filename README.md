@@ -21,12 +21,19 @@ interactive map dashboard.
 > TradeAware), this project implements a simplified, fully open-data
 > proof-of-concept of the core geospatial deforestation-risk pipeline.
 
-**Live demo:** [dashboard](https://saulo1112.github.io/EUDR_Risk_Assessment/)
-(API docs at [eudr-risk-api.onrender.com/docs](https://eudr-risk-api.onrender.com/docs)).
-The dashboard is a static build on GitHub Pages, pointed at a FastAPI + PostGIS
-backend hosted on Render's free tier. Both are free instances, so the API can
-take 30 to 50 seconds to wake up after a few minutes without traffic; that is
-normal, not a bug.
+**Live demo:** [dashboard](https://saulo1112.github.io/EUDR_Risk_Assessment/).
+The dashboard runs entirely on GitHub Pages, no backend to pay for or keep
+awake: [`scripts/build_static_data.py`](scripts/build_static_data.py)
+precomputes the three read-only calls the UI makes (`/farms`, `/stats`,
+`/early-warning`) into plain JSON files at deploy time, and the frontend
+reads those instead of calling a live API. It's a snapshot, refreshed on
+every push that touches the pipeline outputs, not a live query, which is
+fine here since the dashboard already does all of its filtering
+client-side. The FastAPI + PostGIS backend
+([`src/api/`](src/api/)) still exists and is fully documented below for
+anyone who wants a real queryable API (e.g. deployed to
+[Render](https://render.com) or self-hosted); it just isn't required to run
+the dashboard itself.
 
 **Run it locally in one command:**
 `docker compose -f docker/docker-compose.yml up --build`, then open
@@ -57,7 +64,8 @@ end to end, using only open, official datasets.
 - REST API (FastAPI) plus an interactive map dashboard (Leaflet, glass UI).
 - One `docker compose up` starts a pre-seeded PostGIS, the API, and the
   dashboard. 72 tests (unit, API, and integration) plus a lint gate run in CI.
-- Deployed: static frontend on GitHub Pages, API and database on Render.
+- Deployed: fully static dashboard on GitHub Pages (no backend required); a
+  full FastAPI + PostGIS backend is also included for local/self-hosted use.
 
 ## Architecture
 
@@ -99,7 +107,7 @@ Partnership (Côte d'Ivoire, Ghana, Indonesia, Ecuador, Peru).
 | API | FastAPI, SQLAlchemy, GeoAlchemy2 |
 | Frontend | HTML / CSS / JS, Leaflet |
 | Tooling | uv, pytest, ruff, GitHub Actions |
-| Hosting | GitHub Pages (frontend), Render (API + PostGIS) |
+| Hosting | GitHub Pages (fully static by default; Render optional for a live API) |
 
 ## Project structure
 
@@ -121,11 +129,13 @@ Partnership (Côte d'Ivoire, Ghana, Indonesia, Ecuador, Peru).
 │   │   ├── scoring.py               # pure model logic (side-effect free)
 │   │   ├── phase1_aoi_parcels.py ... phase4_scoring_v3.py
 │   │   └── legacy/                  # superseded v2 model, kept as a record
-│   ├── api/                         # FastAPI app (+ Dockerfile)
+│   ├── api/                         # FastAPI app (+ Dockerfile), optional
 │   └── frontend/                    # static map dashboard (+ Dockerfile)
-├── scripts/                         # ad-hoc connectivity / sanity checks
+├── scripts/
+│   ├── build_static_data.py         # farms.geojson + seed -> dashboard's data/*.json
+│   └── ...                          # ad-hoc connectivity / sanity checks
 ├── tests/                           # unit, API and integration tests
-├── render.yaml                      # Render blueprint (API + Postgres)
+├── render.yaml                      # Render blueprint (API + Postgres), optional
 └── .github/workflows/               # CI, GitHub Pages deploy
 ```
 
@@ -243,18 +253,42 @@ because PostgreSQL's entrypoint decompresses `.sql.gz` seeds natively.
 
 ## Deploying
 
-GitHub Pages only serves static files, so it can host the dashboard
-(`src/frontend/`) but not the API or PostGIS. A full live demo needs two
-pieces: the backend on a platform that runs containers ([Render](https://render.com)
-is used here, since its free tier includes a Postgres database with PostGIS
-support and a web service), and the frontend on GitHub Pages, pointed at that
-backend. This is exactly how the live demo above is deployed.
+### Dashboard only, no backend (default, free forever)
 
-**1. Deploy the API and database to Render**
+GitHub Pages only serves static files, so it can't run the API or PostGIS
+directly. It doesn't need to: the dashboard's three read calls (`/farms`,
+`/stats`, `/early-warning`) never take a user-supplied filter, the frontend
+already does all filtering client-side, so their responses can be
+precomputed once and served as plain JSON.
 
-- Push this repo to GitHub, then in Render: **New +** then **Blueprint**,
-  select the repo. Render reads [`render.yaml`](render.yaml) and provisions
-  both resources (free tier) automatically.
+- Repo **Settings**, then **Pages**: set **Source** to **GitHub Actions**.
+- Leave the `API_BASE_URL` repository variable unset (see below).
+- Push to `main` (touching `src/frontend/`, `scripts/build_static_data.py`,
+  `data/farms.geojson` or `docker/init/20_eudr_risk.sql.gz`), or run the
+  *Deploy frontend to GitHub Pages* workflow manually from the **Actions**
+  tab. It runs
+  [`scripts/build_static_data.py`](scripts/build_static_data.py) to turn
+  `data/farms.geojson` and the seed dump into `data/*.json`, stages them
+  next to `src/frontend/`, and sets `window.API_STATIC = true` in
+  `config.js`. See
+  [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml).
+- The dashboard is then live at `https://<username>.github.io/<repo>/`, no
+  server to pay for, cold-start, or keep alive. This is how the live demo
+  above is deployed. The tradeoff: the data is a snapshot from the last
+  deploy, not a live query, and per-farm/filtered API endpoints aren't
+  available from the static site (they're still in `src/api/`, just not
+  wired to this deployment).
+
+### Optional: point the dashboard at a live API instead
+
+Useful if you want server-side filtering, the interactive `/docs`, or to
+build your own client against the API. The backend needs a platform that
+runs containers with a Postgres+PostGIS database; [Render](https://render.com)
+is used here for its free tier, but any host works the same way.
+
+- In Render: **New +** then **Blueprint**, select this repo. Render reads
+  [`render.yaml`](render.yaml) and provisions both resources (free tier)
+  automatically.
 - Render's managed Postgres has no equivalent to
   `docker-entrypoint-initdb.d`, so the seed is loaded once by hand after the
   database is up. Grab its **External Database URL** from the Render
@@ -268,28 +302,21 @@ backend. This is exactly how the live demo above is deployed.
   No local `psql`? Run the same commands through the postgis Docker image
   instead: `docker run --rm postgis/postgis:16-3.4 psql "$RENDER_EXTERNAL_DATABASE_URL" -c "..."`.
 
-- Once the API service finishes deploying, note its public URL
-  (`https://eudr-risk-api.onrender.com` in this deployment) and confirm
-  `/stats` responds.
-
-**2. Deploy the dashboard to GitHub Pages**
-
-- Repo **Settings**, then **Pages**: set **Source** to **GitHub Actions**.
+- Once the API service finishes deploying, confirm `/stats` responds.
 - Repo **Settings**, then **Secrets and variables**, then **Actions**, then
-  the **Variables** tab: add a repository variable `API_BASE_URL` set to the
-  Render API URL from step 1.
-- Push to `main`, or run the *Deploy frontend to GitHub Pages* workflow
-  manually from the **Actions** tab. It regenerates `config.js` with that URL
-  and publishes `src/frontend/`. See
-  [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml).
-- The dashboard is then live at `https://<username>.github.io/<repo>/`. CORS
-  needs no changes: the API already allows any origin
+  the **Variables** tab: add a repository variable `API_BASE_URL` set to
+  that API's URL, then re-run the Pages workflow. It points `config.js` at
+  that URL instead (`window.API_BASE`, `window.API_STATIC = false`); the
+  static snapshot is still built and staged alongside it, just unused.
+  CORS needs no changes: the API already allows any origin
   (`allow_origins=["*"]` in `src/api/main.py`).
 
-**Free-tier caveats** worth knowing before sharing the link: Render's free
-Postgres is deleted after 90 days on the plan, and the free web service spins
-down after 15 minutes idle. The first request after a quiet period takes 30
-to 50 seconds to cold-start rather than failing outright.
+**Free-tier caveats** if you go this route: Render's free Postgres is
+deleted after 30 days of inactivity, and the free web service spins down
+after 15 minutes idle (the first request after a quiet period takes 30 to 50
+seconds to cold-start rather than failing outright). Removing the
+`API_BASE_URL` variable and re-running the workflow switches back to the
+static, no-backend deployment at any time.
 
 ## Testing
 

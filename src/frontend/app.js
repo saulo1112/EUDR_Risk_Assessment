@@ -2,9 +2,19 @@
    EUDR Forest Risk Assessment: frontend logic (vanilla JS)
    ============================================================ */
 
-// Set by config.js (window.API_BASE); falls back to localhost for local dev.
+// Set by config.js. Two modes:
+//  - live API (default): window.API_BASE points at a running FastAPI
+//    backend (falls back to localhost for local dev).
+//  - static (window.API_STATIC = true): no backend at all. The GitHub Pages
+//    deploy runs in this mode by default (see deploy-pages.yml), serving
+//    the precomputed JSON files in data/ built by
+//    scripts/build_static_data.py. The dashboard only ever reads farms in
+//    bulk and filters client-side, so a snapshot is all it needs.
 const API_BASE = (typeof window !== "undefined" && window.API_BASE)
   || "http://localhost:8000";
+const API_STATIC = typeof window !== "undefined" && window.API_STATIC === true;
+const STATIC_DATA_BASE =
+  (typeof window !== "undefined" && window.STATIC_DATA_BASE) || "data";
 
 // ============================================================
 // i18n: UI strings in English and Spanish ({name} = placeholder)
@@ -153,8 +163,22 @@ const fmt = (n, digits = 0) => Number(n).toLocaleString(LOCALES[lang], {
 });
 const $ = (sel) => document.querySelector(sel);
 
+// Maps a REST-style call (path + query string) used elsewhere in this file
+// to the precomputed static file that serves the same data in static mode
+// (see scripts/build_static_data.py). The three calls below are the only
+// ones the dashboard ever makes.
+function staticURL(path) {
+  if (path.startsWith("/farms?")) return `${STATIC_DATA_BASE}/farms.json`;
+  if (path.startsWith("/stats")) return `${STATIC_DATA_BASE}/stats.json`;
+  if (path.startsWith("/early-warning")) {
+    return `${STATIC_DATA_BASE}/early-warning.json`;
+  }
+  throw new Error(`No static file mapped for ${path}`);
+}
+
 async function getJSON(path) {
-  const res = await fetch(`${API_BASE}${path}`);
+  const url = API_STATIC ? staticURL(path) : `${API_BASE}${path}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
   return res.json();
 }
@@ -421,8 +445,14 @@ function renderStats() {
 // ============================================================
 // Early-warning panel
 // ============================================================
+const EARLY_WARNING_LIMIT = 15;
+
 async function loadEarlyWarning() {
-  warningData = await getJSON("/early-warning?limit=15");
+  const fc = await getJSON(`/early-warning?limit=${EARLY_WARNING_LIMIT}`);
+  // In dynamic mode the API already applies the limit; in static mode the
+  // precomputed file carries extra headroom (see build_static_data.py), so
+  // trim it here to match.
+  warningData = { ...fc, features: fc.features.slice(0, EARLY_WARNING_LIMIT) };
   renderEarlyWarning();
 }
 
@@ -468,8 +498,9 @@ function renderEarlyWarning() {
 // Language switch
 // ============================================================
 function showFarmsError() {
+  const url = API_STATIC ? staticURL("/farms?") : API_BASE;
   $("#parcel-list").innerHTML =
-    `<div class="empty">${t("parcels.apiError", { url: API_BASE })}</div>`;
+    `<div class="empty">${t("parcels.apiError", { url })}</div>`;
 }
 
 // Static markup carries data-i18n (text), data-i18n-html (trusted markup
