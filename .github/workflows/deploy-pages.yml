@@ -1,5 +1,13 @@
 name: Deploy frontend to GitHub Pages
 
+# Publishes the dashboard as a fully static site (see "Generate config.js"
+# below and scripts/build_static_data.py): no backend to provision, keep
+# awake, or pay for, and no cold-start latency for visitors. Server-side
+# filtering and the interactive API docs remain available through the
+# FastAPI + PostGIS backend in src/api/ -- set the API_BASE_URL repository
+# variable to point this deploy at a live instance (Render or self-hosted).
+# See README.md > Deploying for both paths.
+
 on:
   push:
     branches: [main]
